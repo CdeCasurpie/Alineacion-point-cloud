@@ -1,0 +1,61 @@
+schema: 1
+source: "005"
+reference: "009"
+sources:
+  "005":
+    run: /home/cesar.perales/projects/tesis/photogrammetry-pipeline/outputs/005/barranco005_cpu_recovery_a2e81b66e72d67b2
+    component: "1"
+    images: 663
+    points: 466620
+  "009":
+    run: /home/cesar.perales/projects/tesis/photogrammetry-pipeline/outputs/009/barranco_sparse4k_packed_d34540f0a77916e4
+    component: "0"
+    images: 468
+    points: 416321
+gis:
+  lots: /home/cesar.perales/projects/tesis/lotes/BARRANCO_LM_geogpsperu.geojson
+  block_candidates: /home/cesar.perales/projects/tesis/photogrammetry-pipeline/web/public/gis/manzanas.geojson
+  map: /home/cesar.perales/projects/tesis/photogrammetry-pipeline/datasets/raw/_drive_barranco/mapa_provisional.png
+  metric_crs: EPSG:32718
+  # Explicit lot selections can override the candidate chosen from model support.
+  lot_ids: {}
+  block_ids:
+    "005": [MZ-BAR-FD7E0473D4]
+    "009": [MZ-BAR-C440DB7CFC]
+gps:
+  max_gap_s: 1.0
+  time_shift_s: 0.0
+  robust_threshold_m: 8.0
+  min_baseline_m: 15.0
+  selection_margin_m: 15.0
+selection:
+  max_source_views: 32
+  max_target_views: 16
+  min_relevant_points: 30
+  min_track_length: 3
+  min_frame_gap: 4
+  max_spatial_points: 50000
+  max_pairs: 600
+registration:
+  # Bridge matches are sparse: they only cover the shared block, so the
+  # absolute count gate is low and the relative coverage gate is strict.
+  min_inliers: 25
+  min_inlier_ratio: 0.20
+  min_pair_inliers: 8
+  max_error_px: 4.0
+  min_common_3d: 30
+alignment:
+  min_shared_views: 6
+  center_threshold_m: 2.0
+  max_rotation_error_deg: 5.0
+  holdout_fraction: 0.25
+matching:
+  threads: 8
+  gpu: false
+refinement:
+  threads: 8
+  max_images: 64
+  max_points: 30000
+  max_iterations: 40
+  gps_prior: false
+  refine_intrinsics: false

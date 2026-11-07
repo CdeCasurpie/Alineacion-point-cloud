@@ -1,0 +1,22 @@
+Bootstrap: localimage
+From: /home/cesar.perales/projects/tesis/photogrammetry-pipeline/containers/sparse313.sif
+
+%files
+    containers/requirements.txt /opt/alignment/requirements.txt
+
+%post
+    set -eu
+    /opt/colmap/bin/python -m pip install --no-cache-dir -r /opt/alignment/requirements.txt
+    /opt/colmap/bin/python -m pip freeze > /opt/alignment/requirements-resolved.txt
+
+%environment
+    export PATH=/opt/colmap/bin:/usr/bin:/bin
+    export MPLBACKEND=Agg
+    export QT_QPA_PLATFORM=offscreen
+    export PYTHONDONTWRITEBYTECODE=1
+
+%test
+    /opt/colmap/bin/python -B -c 'import pycolmap, scipy, pyproj, shapely, matplotlib, yaml, PIL; assert pycolmap.__version__ == "3.13.0"; print("alignment runtime", pycolmap.__version__)'
+
+%runscript
+    exec "$@"

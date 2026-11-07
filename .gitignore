@@ -1,0 +1,11 @@
+inputs/
+work/
+results/
+logs/*
+!logs/.gitkeep
+.state/
+*.sif
+*.pyc
+__pycache__/
+.pytest_cache/
+slurm-*.out
