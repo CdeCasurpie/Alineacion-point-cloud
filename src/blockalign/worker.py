@@ -94,6 +94,9 @@ def execute(workspace,run_id):
             elif request["plan"]["operation"]=="correction":
                 from .correction import correct
                 result=correct(workspace,request,scratch)
+            elif request["plan"]["operation"]=="campaign":
+                from .campaign import run
+                result=run(workspace,request,scratch)
             else:
                 raise RuntimeError("Unsupported operation")
             result.update(run_id=run_id,job_id=os.environ["SLURM_JOB_ID"],elapsed_seconds=time.monotonic()-start,engine=request["engine"],

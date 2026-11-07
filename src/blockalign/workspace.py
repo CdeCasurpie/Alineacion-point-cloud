@@ -74,12 +74,14 @@ class Workspace:
               "world_origin":base["world_origin"] if base else None}
         return self._plan(plan)
 
-    def plan_export(self,map_revision,product="atlas",block_assets=None):
+    def plan_export(self,map_revision,product="atlas",block_assets=None,color_mode="original"):
         if product not in ("atlas","transformed_ply","combined_ply"):
             raise ContractError("Supported exports: atlas, transformed_ply, combined_ply")
+        if color_mode not in ("original","by_block"):
+            raise ContractError("Supported colors: original or by_block")
         mapping=read(self.root/"maps"/map_revision/"map.json")
         return self._plan({"schema_version":"1.0","operation":"export","map_revision":map_revision,
-                           "map_fingerprint":digest(mapping),"product":product,"block_assets":block_assets or {}})
+                           "map_fingerprint":digest(mapping),"product":product,"block_assets":block_assets or {},"color_mode":color_mode})
 
     def plan_correction(self,map_revision,measurement_id,*,max_images=64,max_points=30000,max_iterations=40):
         """Explicit pair seam correction; never mutates original map or marks old dense as corrected."""
@@ -93,6 +95,18 @@ class Workspace:
         return self._plan({"schema_version":"1.0","operation":"correction","map_revision":map_revision,
                            "map_fingerprint":digest(mapping),"measurement_id":measurement_id,
                            "max_images":max_images,"max_points":max_points,"max_iterations":max_iterations})
+
+    def plan_campaign(self,blocks,*,reference=None,policy=None,map_hints=None,max_expanded_attempts=12):
+        """Measure spatial neighbors and return every verified connected component."""
+        base=self.plan_add(blocks,reference=reference,policy=policy)
+        if not isinstance(max_expanded_attempts,int) or isinstance(max_expanded_attempts,bool) or not 0<=max_expanded_attempts<=100:
+            raise ContractError("Invalid expanded attempt budget")
+        hints=map_hints or []
+        if any(not isinstance(p,list) or len(p)!=2 or any(not isinstance(i,str) for i in p) for p in hints):
+            raise ContractError("Map hints must be pairs of block labels")
+        body={k:v for k,v in base.items() if k!="id"}
+        body.update(operation="campaign",map_hints=hints,max_expanded_attempts=max_expanded_attempts)
+        return self._plan(body)
 
     def _plan(self,body):
         key=digest(body);body={**body,"id":key}

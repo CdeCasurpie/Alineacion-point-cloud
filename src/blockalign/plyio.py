@@ -84,18 +84,31 @@ def write_header(f,count,props):
     f.write(text.encode())
 
 
-def transform_clouds(inputs,destination):
+def transform_clouds(inputs,destination,*,block_ids=None,colors=None):
     """inputs: [(path, matrix), ...]; concatenation requires identical attributes."""
     entries=[(Path(p),similarity(S),header(p)) for p,S in inputs]
     if not entries:
         raise ValueError("No cloud inputs")
-    props=entries[0][2]["properties"]
-    if any(m["properties"]!=props for _,_,m in entries):
+    base_props=entries[0][2]["properties"]
+    if any(m["properties"]!=base_props for _,_,m in entries):
         raise ValueError("Combined PLY requires matching vertex schemas; export per-block instead")
+    if block_ids is not None and (len(block_ids)!=len(entries) or any(not 0<=i<=65535 for i in block_ids)):
+        raise ValueError("Expected one uint16 block ID per input")
+    if colors is not None and (len(colors)!=len(entries) or any(len(c)!=3 or any(not 0<=int(v)<=255 for v in c) for c in colors)):
+        raise ValueError("Expected one RGB color per input")
+    props=list(base_props);names={n for n,t in props}
+    if block_ids is not None:
+        if "block_id" in names:
+            raise ValueError("Source already contains block_id; do not silently overwrite provenance")
+        props.append(("block_id","ushort"))
+    if colors is not None:
+        props=[(n,"uchar" if n in ("red","green","blue") else t) for n,t in props]
+        props.extend((n,"uchar") for n in ("red","green","blue") if n not in names)
+    output_dtype=np.dtype([(n,TYPES[t]) for n,t in props])
     count=sum(m["count"] for _,_,m in entries)
     with Path(destination).open("wb") as f:
         write_header(f,count,props)
-        for path,S,meta in entries:
+        for source_index,(path,S,meta) in enumerate(entries):
             scale=np.cbrt(np.linalg.det(S[:3,:3]));R=S[:3,:3]/scale
             for data in chunks(path,meta):
                 xyz=np.c_[data["x"],data["y"],data["z"]]
@@ -115,5 +128,16 @@ def transform_clouds(inputs,destination):
                     normals/=np.maximum(length[:,None],1e-30)
                     for i,n in enumerate(("nx","ny","nz")):
                         data[n]=normals[:,i]
+                if block_ids is not None or colors is not None:
+                    output=np.empty(len(data),dtype=output_dtype)
+                    for name in data.dtype.names:
+                        if colors is None or name not in ("red","green","blue"):
+                            output[name]=data[name]
+                    if block_ids is not None:
+                        output["block_id"]=block_ids[source_index]
+                    if colors is not None:
+                        for i,name in enumerate(("red","green","blue")):
+                            output[name]=colors[source_index][i]
+                    data=output
                 f.write(data.tobytes())
     return {"vertices":count,"properties":props,"operation":"similarity placement / concatenation; not surface fusion"}

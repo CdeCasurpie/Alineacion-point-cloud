@@ -22,6 +22,7 @@ def main():
     export=commands.add_parser("plan-export");export.add_argument("map_revision")
     export.add_argument("--product",choices=("atlas","transformed_ply","combined_ply"),default="atlas")
     export.add_argument("--sparse-preview",action="store_true")
+    export.add_argument("--color-mode",choices=("original","by_block"),default="original")
     correction=commands.add_parser("plan-correction");correction.add_argument("map_revision");correction.add_argument("measurement_id")
     correction.add_argument("--max-iterations",type=int,default=40)
     args=p.parse_args();w=Workspace.open(args.workspace)
@@ -41,7 +42,7 @@ def main():
     else:
         mapping=read(w.root/"maps"/args.map_revision/"map.json")
         assets={r:"sparse" for r in mapping["placements"]} if args.sparse_preview else None
-        result=w.plan_export(args.map_revision,args.product,assets)
+        result=w.plan_export(args.map_revision,args.product,assets,color_mode=args.color_mode)
     print(json.dumps(result,indent=2))
 
 

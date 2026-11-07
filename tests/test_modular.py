@@ -188,3 +188,31 @@ def test_ply_mesh_and_truncated_payload_are_rejected(tmp_path):
     truncated=tmp_path/"short.ply";truncated.write_text("ply\nformat binary_little_endian 1.0\nelement vertex 2\nproperty float x\nproperty float y\nproperty float z\nend_header\n")
     with pytest.raises(ValueError):
         list(chunks(truncated,header(truncated)))
+
+
+def test_categorical_export_preserves_block_provenance_and_distinct_colors(tmp_path):
+    from blockalign.palette import palette
+    source=tmp_path/"source.ply"
+    source.write_text("ply\nformat ascii 1.0\nelement vertex 1\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n1 2 3 10 20 30\n")
+    colors=palette({"first":{"block_id":"005"},"second":{"block_id":"009"}})
+    output=tmp_path/"colored.ply"
+    transform_clouds([(source,np.eye(4)),(source,np.eye(4))],output,block_ids=[5,9],colors=[colors["first"]["rgb"],colors["second"]["rgb"]])
+    data=next(chunks(output,header(output)))
+    np.testing.assert_array_equal(data["block_id"],[5,9])
+    assert list(data[0][["red","green","blue"]])==colors["first"]["rgb"]
+    assert colors["first"]["rgb"]!=colors["second"]["rgb"]
+    assert output.stat().st_size-header(output)["offset"]==2*(15+2)
+
+
+def test_palette_is_stable_when_more_numbered_blocks_arrive():
+    from blockalign.palette import palette
+    first=palette({"a":{"block_id":"005"}})
+    later=palette({"a":{"block_id":"005"},"b":{"block_id":"009"}})
+    assert first["a"]==later["a"]
+
+
+def test_campaign_components_do_not_join_geographically_close_but_unverified_blocks():
+    from blockalign.campaign import components
+    edges=[{"source":"a","target":"b"},{"source":"c","target":"d"}]
+    result=components(["a","b","c","d","island"],edges)
+    assert {frozenset(g) for g in result}=={frozenset(["a","b"]),frozenset(["c","d"]),frozenset(["island"])}

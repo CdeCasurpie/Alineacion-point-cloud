@@ -21,6 +21,11 @@ separado (`var/barranco/` en esta instalación).
 - Incorporación de bloques conservando aristas compatibles de una versión base.
 - Atlas, PLY por activo y concatenación PLY por streaming, conservando atributos
   escalares y transformando normales cuando están presentes.
+- Campaña multi-bloque (`plan_campaign`): auditoría de todos los bloques,
+  medición de vecinos declarados + vecinos espaciales, puentes inversos con
+  presupuesto acotado y solución independiente por componente conexo.
+- Exports categóricos: campo `block_id` (uint16) y color plano por cuadra con
+  paleta determinista, leyenda PNG y vista XY de las nubes sparse colocadas.
 - Corrección explícita de una unión por pares: fusión auditada, BA acotado,
   variante sparse derivada y solicitudes de regeneración.
 
@@ -120,6 +125,50 @@ de manifiestos, política y referencia elegidos. El job crea su scratch en
 `/local/$USER/blockalign/$SLURM_JOB_ID`; las BD de matching se generan allí y no
 se conserva una copia de varios GB por cada arista.
 
+## Campaña multi-cuadra
+
+Cuando hay varios bloques por registrar y medir, `plan_campaign` encapsula el
+flujo completo de la campaña: auditoría de todos los bloques, medición de cada
+vecindad declarada más la vecindad espacial sugerida por GIS, y puentes inversos
+/expandidos con presupuesto acotado para reconectar componentes. Cada componente
+conexo verificado se resuelve como su propio mapa; los bloques no conectados se
+listan explícitamente y nunca se presentan como alineados.
+
+```python
+plan = w.plan_campaign(
+    refs,                      # todas las referencias registradas
+    reference=by_label['009'], # fija el origen del marco (opcional)
+    map_hints=hints,           # pares visuales del mapa provisional (etiquetas)
+    max_expanded_attempts=12,  # puentes extra por distancia
+)
+run = w.submit(plan, image='/ruta/al/alignment313.sif', cpus=8, memory_gb=24,
+               time='04:00:00')
+```
+
+- `map_hints` son pares sugeridos (no correspondencias verificadas); el motor
+  sigue exigiendo evidencia suficiente por arista en ambos sentidos.
+- Los pares que fallan por primera vez se reintentan en sentido inverso solo si
+  aún separan componentes; los rechazos por insuficiencia de evidencia se
+  conservan como artefactos persistentes y no se recomputan.
+- El progreso se escribe en el checkpoint del run (`campaign-progress.json`)
+  después de cada par; un reinicio reutiliza auditorías y mediciones cacheadas.
+- El informe final (incluido en `result(run)`) lista componentes, intentos,
+  aceptados, fallos técnicos y rechazos de auditoría.
+
+Para Barranco, `tools/submit_barranco.py` encadena inventario previo + registro
++ campaña con las vecindades de `examples/barranco-map-neighbors.json`:
+
+```bash
+sbatch slurm/inventory-barranco.slurm /ruta/a/photogrammetry-pipeline
+python3 tools/submit_barranco.py \
+  --inventory results/barranco-inventory-<JOB>/inventory.json \
+  --workspace var/barranco --image containers/alignment313.sif
+```
+
+`tools/inventory_barranco.py` valida los native models de las 25 etiquetas del
+mapa provisional (metadatos solamente; la auditoría pesada sigue en la campaña)
+y materializa `manifests/<block>.json` por bloque elegible.
+
 ## Agregar otra cuadra
 
 ```python
@@ -183,6 +232,33 @@ plan = w.plan_export(
     block_assets={ref_a: 'sparse', ref_b: 'sparse'},
 )
 ```
+
+### Color por cuadra (exports categóricos)
+
+Con `color_mode='by_block'` (por defecto `'original'` conserva el RGB
+fotográfico) el export materializa además:
+
+- `block_id`: campo escalar `ushort` adicional por vértice, con la etiqueta
+  numérica de la cuadra; si la fuente ya lo trae se rechaza el export.
+- Un color plano por cuadra de una paleta determinista (basada en `digest` de la
+  etiqueta + proporción áurea de tono); no depende del orden de registro y se
+  conserva al añadir más cuadras numeradas (estabilidad probada).
+- `palette.json` (etiqueta → block_id/RGB/hex) y `legend.png` (leyenda).
+- `overview_xy.png`: muestreo de cada bloque sparse en el marco común para
+  inspección rápida de costuras.
+
+```python
+plan = w.plan_export(map_id, product='combined_ply',
+                     block_assets={ref: 'sparse' for ref in refs},
+                     color_mode='by_block')
+run = w.submit(plan, image='/ruta/al/alignment313.sif', cpus=4, memory_gb=16,
+               time='00:40:00')
+```
+
+Nota: si los manifiestos no tienen activos PLY registrados (`assets: []`, el
+caso habitual con solo modelos COLMAP), hay que pasar `block_assets={ref:
+'sparse'}` para cada bloque; sin ello la concatenación no recibe entradas y
+falla con `ValueError: No cloud inputs`.
 
 La concatenación no elimina duplicados ni corrige geometría interna. Sus
 vértices pueden superar el conteo del modelo sparse fusionado del prototipo.
