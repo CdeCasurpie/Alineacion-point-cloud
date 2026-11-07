@@ -1,7 +1,9 @@
 # Arquitectura prevista: alineación incremental de bloques
 
-Estado: propuesta de evolución. El código actual implementa el prototipo
-005–009; todavía no es el pipeline general descrito aquí.
+Estado: arquitectura objetivo. La primera API modular está implementada como
+BlockAlign 0.2, con capacidades y límites en `modular-api.md` y ensayos reales
+en `validation-modular.md`. Este documento incluye también evolución posterior
+a la versión actual; no todos sus formatos y escenarios están implementados.
 
 ## Objetivo y frontera entre proyectos
 

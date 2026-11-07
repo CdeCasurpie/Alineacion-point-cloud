@@ -1,9 +1,24 @@
 # Experimento independiente: alineación 005 → 009
 
+## API modular implementada: BlockAlign 0.2
+
+La API nueva permite registrar bloques, crear planes inmutables, alinear pares
+sin IDs de escena incrustados, resolver un grafo, agregar bloques con caché y
+exportar un atlas o PLY. La corrección local es una operación derivada explícita
+que declara solicitudes de regeneración de densos.
+
+**Uso y contratos:** [`docs/modular-api.md`](docs/modular-api.md).
+**Validación real:** [`docs/validation-modular.md`](docs/validation-modular.md):
+25 pruebas aprobadas, mapa incremental 001–005–009 y exportación de 1113792
+puntos sparse alineados. Incluye tiempos, versiones y límites del ensayo.
+El código del prototipo sigue disponible bajo `alignexp` como referencia.
+Los datos operativos nuevos se guardan en un workspace separado (`var/`, fuera
+de Git). Los resultados históricos descritos debajo corresponden al prototipo.
+
 La propuesta para convertir el prototipo en un pipeline modular incremental,
 compatible con reconstrucciones sparse y densos OpenMVS, está en
 [`docs/architecture.md`](docs/architecture.md). Es una arquitectura planificada;
-el código actual corresponde al experimento 005–009.
+el documento describe también etapas posteriores a la primera API modular.
 
 ## Resultado vigente
 

@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "block_id": "cuadra-norte",
+  "sparse": {
+    "format": "colmap",
+    "version": "3.13.0",
+    "model_uri": "../data/cuadra-norte/sparse",
+    "frame_id": "cuadra-norte-sparse"
+  },
+  "features": {
+    "family": "sift",
+    "database_uri": "../data/cuadra-norte/database.db"
+  },
+  "images": {
+    "root_uri": "../data/cuadra-norte/images",
+    "catalog_uri": "../data/cuadra-norte/image_info.json",
+    "catalog_format": "image_info_v1"
+  },
+  "geography": {
+    "crs": "EPSG:32718",
+    "references_uri": "../data/cuadra-norte/camera_references.csv"
+  },
+  "assets": []
+}

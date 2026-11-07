@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "neighbor_limit": 4,
+  "max_source_views": 32,
+  "max_target_views": 16,
+  "max_pairs": 600,
+  "min_pnp_inliers": 30,
+  "max_center_error_m": 2.0,
+  "max_rotation_error_deg": 5.0,
+  "seed": 7
+}

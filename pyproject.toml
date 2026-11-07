@@ -3,14 +3,18 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "alignexp"
-version = "0.1.0"
-description = "Independent GPS/visibility-guided SfM fusion experiment, Barranco 005–009"
+name = "blockalign"
+version = "0.2.0"
+description = "Versioned incremental SfM block alignment, graph placement and derived seam correction"
 requires-python = ">=3.10"
 dependencies = ["pycolmap==3.13.0", "numpy", "scipy", "pyproj", "shapely>=2", "PyYAML", "Pillow", "matplotlib"]
 
 [project.scripts]
 alignexp = "alignexp.cli:main"
+blockalign = "blockalign.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+blockalign = ["resources/*.slurm"]

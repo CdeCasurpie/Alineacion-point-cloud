@@ -1,5 +1,8 @@
 Bootstrap: localimage
-From: /home/cesar.perales/projects/tesis/photogrammetry-pipeline/containers/sparse313.sif
+From: {{ base_image }}
+
+%arguments
+    base_image=sparse313.sif
 
 %files
     containers/requirements.txt /opt/alignment/requirements.txt
