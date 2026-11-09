@@ -67,7 +67,7 @@ def run(workspace,request,scratch):
         local=Path(scratch)/("pair-"+key);destination=workspace/"measurements"/key
         try:
             measurement,hit=align_pair(workspace,audits[source],audits[target],paths[source],paths[target],current_policy,
-                scratch,request["pair_engine"],int(os.environ["SLURM_CPUS_PER_TASK"]))
+                scratch,request["pair_engine"],int(os.environ.get("BLOCKALIGN_CPUS",os.environ.get("SLURM_CPUS_PER_TASK","1"))))
             pair_hits+=hit;edges.append(measurement)
             entry.update(status="accepted",measurement=measurement["id"],cached=hit,registered=measurement["registered"])
         except InsufficientEvidence as error:

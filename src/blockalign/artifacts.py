@@ -9,8 +9,22 @@ from .storage import read, write
 
 
 def require_job():
-    if not os.environ.get("SLURM_JOB_ID"):
-        raise RuntimeError("Numerical work and dataset audits require a Slurm allocation")
+    if os.environ.get("SLURM_JOB_ID"):
+        return
+    # Explicit local backend for L507. It must run in a real bounded user scope;
+    # no fabricated Slurm IDs and no unbounded numerical work on import.
+    context = os.environ.get("BLOCKALIGN_LOCAL_CONTEXT")
+    if context:
+        value = read(context)
+        group = Path('/sys/fs/cgroup') / Path('/proc/self/cgroup').read_text().strip().split(':', 2)[2].lstrip('/')
+        maximum = (group / 'memory.max').read_text().strip()
+        swap = (group / 'memory.swap.max').read_text().strip()
+        cpu = (group / 'cpu.max').read_text().split()
+        if (value.get('backend') == 'local' and value.get('pid') == os.getpid()
+                and maximum != 'max' and int(maximum) <= 40 * 1024**3 and swap == '0'
+                and cpu[0] != 'max' and int(cpu[0]) / int(cpu[1]) <= 8):
+            return
+    raise RuntimeError("Numerical work requires Slurm or an explicit resource-bounded local allocation")
 
 
 def sha(path):
@@ -36,7 +50,12 @@ def publish(local,destination):
     local=Path(local);destination=Path(destination)
     destination.parent.mkdir(parents=True,exist_ok=True)
     temporary=destination.with_name(".pending-"+uuid.uuid4().hex)
-    shutil.copytree(local,temporary)
+    if os.environ.get('BLOCKALIGN_LOCAL_CONTEXT') and local.stat().st_dev==destination.parent.stat().st_dev:
+        # Local scratch and workspace share /data: move the derived product
+        # atomically instead of temporarily doubling large dense exports.
+        os.rename(local,temporary)
+    else:
+        shutil.copytree(local,temporary)
     try:
         os.rename(temporary,destination)
     except OSError:

@@ -25,6 +25,9 @@ fotogrametría se toman como entrada inmutable.
 - **`var/barranco/`** — workspace operativo (fuera de Git): registros,
   auditorías, mediciones, mapas y exports.
 - **`tools/` y `slurm/`** — demo, inventario Barranco y runners de Slurm.
+- **L507 local** — ejecución supervisada fuera de Slurm, importación del
+  pipeline 3.11 y campaña densa de 15 manzanas:
+  [`docs/l507-local.md`](docs/l507-local.md).
 
 ## Estado y resultados
 
@@ -51,6 +54,12 @@ fotogrametría se toman como entrada inmutable.
 
    Las otras 13 cuadras del mapa provisional aún no tienen reconstrucción
    utilizable; 003 entra con su componente principal y estado `partial`.
+
+4. **Campaña L507 de 15 manzanas** (`docs/l507-local.md`): un componente de
+   15 bloques, 17 aristas aceptadas, 4.065.767 puntos sparse y una densa de
+   5.675.791.302 puntos colocados en el marco común (153,29 GiB, con redundancia
+   de solapes). Los productos se publicaron por streaming en la maestra.
+   La 023 conserva advertencia de cobertura 468/480 vistas (97,5%).
 
 ## Flujo típico con la API
 
@@ -106,7 +115,8 @@ activa se rechaza: hay que exportar primero.
 
 ## Límites actuales
 
-- Solo sparse en campaña; sin densos OpenMVS disponibles en los runs.
+- La campaña histórica de Khipu validó sparse; L507 valida también la colocación
+  de activos densos con lineage. Aún no hay deduplicación global ni mallado urbano.
 - Sin cierre de ciclo real (validado con ciclos sintéticos) ni BA urbano
   global; la corrección es una unión por pares derivada.
 - COLMAP/PyCOLMAP 3.13.0, SIFT 128, SIMPLE_RADIAL, rigs triviales,
