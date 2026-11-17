@@ -8,16 +8,24 @@ from scipy.spatial.transform import Rotation
 
 
 def cameras(model):
-    """Read optimized SIMPLE_RADIAL intrinsics from the reconstruction, not DB priors."""
+    """Read optimized intrinsics, never database priors (legacy binary layout)."""
+    models = {
+        0: ("SIMPLE_PINHOLE", 3), 1: ("PINHOLE", 4), 2: ("SIMPLE_RADIAL", 4),
+        3: ("RADIAL", 5), 4: ("OPENCV", 8), 5: ("OPENCV_FISHEYE", 8),
+        6: ("FULL_OPENCV", 12), 7: ("FOV", 5), 8: ("SIMPLE_RADIAL_FISHEYE", 4),
+        9: ("RADIAL_FISHEYE", 5), 10: ("THIN_PRISM_FISHEYE", 12),
+        11: ("RAD_TAN_THIN_PRISM_FISHEYE", 16),
+    }
     result = {}
     with (Path(model) / "cameras.bin").open("rb") as f:
         count = struct.unpack("<Q", f.read(8))[0]
         for _ in range(count):
             cid, kind, width, height = struct.unpack("<iiQQ", f.read(24))
-            if kind != 2:
-                raise ValueError("Prototype camera reader supports SIMPLE_RADIAL only")
-            params = np.array(struct.unpack("<dddd", f.read(32)))
-            result[cid] = {"model": "SIMPLE_RADIAL", "width": width, "height": height, "params": params}
+            if kind not in models:
+                raise ValueError(f"Unsupported COLMAP camera model ID: {kind}")
+            name, size = models[kind]
+            params = np.array(struct.unpack("<"+"d"*size, f.read(8*size)))
+            result[cid] = {"model": name, "model_id": kind, "width": width, "height": height, "params": params}
         if f.read(1):
             raise ValueError("Unexpected cameras.bin trailing data")
     return result

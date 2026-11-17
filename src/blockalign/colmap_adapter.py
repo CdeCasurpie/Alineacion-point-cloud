@@ -22,10 +22,15 @@ def allocate(manifests):
     return result
 
 
-def feature_database(manifests,namespaces,path):
+def feature_database(manifests,namespaces,path,selected=None):
     source=Path(next(iter(manifests.values()))["features"]["database_uri"])
-    src=sqlite3.connect(source.as_uri()+"?mode=ro&immutable=1",uri=True)
-    dst=sqlite3.connect(path);src.backup(dst);src.close()
+    if selected is None:
+        src=sqlite3.connect(source.as_uri()+"?mode=ro&immutable=1",uri=True)
+        dst=sqlite3.connect(path);src.backup(dst);src.close()
+    else:
+        # Manual plans need only their explicitly approved pair endpoints.
+        handle=pc.Database.open(str(path));handle.close()
+        dst=sqlite3.connect(path)
     dst.execute("PRAGMA foreign_keys=OFF")
     tables=[r[0] for r in dst.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
     for name in tables:
@@ -37,10 +42,12 @@ def feature_database(manifests,namespaces,path):
         for cid,calibration in ns["calibrations"].items():
             new=ns["cameras"][cid]
             dst.execute("INSERT INTO cameras(camera_id,model,width,height,params,prior_focal_length) VALUES(?,?,?,?,?,?)",
-                        (new,2,calibration["width"],calibration["height"],calibration["params"].astype("<f8").tobytes(),1))
+                         (new,calibration.get("model_id",2),calibration["width"],calibration["height"],calibration["params"].astype("<f8").tobytes(),1))
             dst.execute("INSERT INTO rigs(rig_id,ref_sensor_id,ref_sensor_type) VALUES(?,?,0)",(new,new))
         src=sqlite3.connect(Path(manifest["features"]["database_uri"]).as_uri()+"?mode=ro&immutable=1",uri=True)
         for old,new in ns["images"].items():
+            if selected is not None and old not in selected[role]:
+                continue
             view=ns["views"][old];cid=ns["cameras"][view["camera_id"]]
             dst.execute("INSERT INTO images(image_id,name,camera_id) VALUES(?,?,?)",(new,ns["names"][old],cid))
             dst.execute("INSERT INTO frames(frame_id,rig_id) VALUES(?,?)",(new,cid))
